@@ -4,16 +4,12 @@ import pandas as pd
 st.set_page_config(page_title="Brand Reputation Dashboard - 2023", layout="wide")
 st.title("Brand Reputation Dashboard - 2023")
 
-# -----------------------
-# LOADERS
-# -----------------------
 @st.cache_data
 def load_csv(path: str) -> pd.DataFrame:
     df = pd.read_csv(path)
     if "date" in df.columns:
         df["date"] = pd.to_datetime(df["date"], errors="coerce")
     return df
-
 
 def safe_load(path: str, missing_msg: str) -> pd.DataFrame:
     try:
@@ -22,11 +18,11 @@ def safe_load(path: str, missing_msg: str) -> pd.DataFrame:
         st.sidebar.warning(missing_msg)
         return pd.DataFrame()
 
-
+# Load data
 products_df = safe_load("products.csv", "Manjka products.csv — zaženi scrape_all.py")
 testimonials_df = safe_load("testimonials.csv", "Manjka testimonials.csv — zaženi scrape_all.py")
 
-# ✅ Reviews mora brati reviews_scored.csv (ker ima sentiment + confidence)
+# ✅ FORCE: scored reviews
 reviews_df = safe_load(
     "reviews_scored.csv",
     "Manjka reviews_scored.csv — zaženi precompute_sentiment.py lokalno (po scrape_all.py)."
@@ -36,26 +32,20 @@ if reviews_df.empty:
     st.error("Manjka ali je prazen reviews_scored.csv — zaženi precompute_sentiment.py lokalno.")
     st.stop()
 
-# reviews: osnovno čiščenje
+# Clean + only 2023
 if "text" in reviews_df.columns:
     reviews_df["text"] = reviews_df["text"].astype(str).fillna("").str.strip()
 
-# varovalka: samo 2023
 if "date" in reviews_df.columns:
     reviews_df = reviews_df[reviews_df["date"].dt.year == 2023].copy()
 
-# -----------------------
-# SIDEBAR NAVIGATION
-# -----------------------
+# Sidebar
 st.sidebar.header("Navigation")
 section = st.sidebar.radio("Select section:", ["Products", "Testimonials", "Reviews"])
 
-# -----------------------
-# PAGES
-# -----------------------
+# Pages
 if section == "Products":
     st.subheader("Products")
-
     if products_df.empty:
         st.info("Ni podatkov za Products. (Preveri products.csv)")
     else:
@@ -63,34 +53,38 @@ if section == "Products":
 
 elif section == "Testimonials":
     st.subheader("Testimonials")
-
     if testimonials_df.empty:
         st.info("Ni podatkov za Testimonials. (Preveri testimonials.csv)")
     else:
         st.dataframe(testimonials_df.reset_index(drop=True), width="stretch")
 
-else:  # Reviews
+else:
     st.subheader("Reviews (2023)")
 
-    # ✅ varovalka: če ni sentiment/confidence, raje lep error kot KeyError
-    required_cols = {"sentiment", "confidence", "date"}
-    missing = required_cols - set(reviews_df.columns)
-    if missing:
+    # ✅ DEBUG PANEL (to ti bo takoj povedalo kaj je narobe)
+    with st.expander("DEBUG: columns in reviews_scored.csv"):
+        st.write("Columns:", list(reviews_df.columns))
+        st.dataframe(reviews_df.head(5), width="stretch")
+
+    # ✅ mapiranje, če imaš slučajno POSITIVE/NEGATIVE
+    if "sentiment" not in reviews_df.columns and "sentiment_raw" in reviews_df.columns:
+        reviews_df["sentiment"] = reviews_df["sentiment_raw"].map({"POSITIVE": "Positive", "NEGATIVE": "Negative"})
+
+    # ✅ zadnja varovalka
+    if "sentiment" not in reviews_df.columns:
         st.error(
-            "V reviews_scored.csv manjkajo stolpci: "
-            + ", ".join(sorted(missing))
-            + ". Preveri, da si pravilno zagnala precompute_sentiment.py."
+            "V reviews_scored.csv NI stolpca 'sentiment'. "
+            "Odpri DEBUG zgoraj in preveri, kako se stolpci imenujejo. "
+            "Naj bo vsaj: date, text, sentiment, confidence."
         )
         st.stop()
 
-    if reviews_df.empty:
-        st.info("Ni reviewov za leto 2023.")
+    if "confidence" not in reviews_df.columns:
+        st.error("V reviews_scored.csv manjka stolpec 'confidence'.")
         st.stop()
 
-    # seznam mesecev, ki obstajajo
-    month_periods = (
-        reviews_df["date"].dropna().dt.to_period("M").sort_values().unique()
-    )
+    # Month selector
+    month_periods = reviews_df["date"].dropna().dt.to_period("M").sort_values().unique()
     month_labels = [p.strftime("%b %Y") for p in month_periods]
 
     if not month_labels:
@@ -107,20 +101,9 @@ else:  # Reviews
         st.info("Za ta mesec ni podatkov.")
         st.stop()
 
-    # counts + avg confidence
-    counts = (
-        filtered["sentiment"]
-        .value_counts()
-        .reindex(["Positive", "Negative"])
-        .fillna(0)
-        .astype(int)
-    )
-
-    avg_conf = (
-        filtered.groupby("sentiment")["confidence"]
-        .mean()
-        .reindex(["Positive", "Negative"])
-    )
+    # Sentiment summary
+    counts = filtered["sentiment"].value_counts().reindex(["Positive", "Negative"]).fillna(0).astype(int)
+    avg_conf = filtered.groupby("sentiment")["confidence"].mean().reindex(["Positive", "Negative"])
 
     st.markdown("### Sentiment povzetek")
     c1, c2 = st.columns(2)
