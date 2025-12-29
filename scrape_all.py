@@ -206,11 +206,9 @@ def scrape_products(max_pages: int = 50) -> pd.DataFrame:
     for page in range(1, max_pages + 1):
         soup = get_soup(base_url, params={"page": page})
 
-        # kartice produktov (poberemo tudi nekaj fallbackov)
         cards = soup.select(".product, .product-card")
         print(f"Products page {page}: {len(cards)}")
 
-        # če ni več kartic, smo na koncu
         if not cards:
             break
 
@@ -221,11 +219,11 @@ def scrape_products(max_pages: int = 50) -> pd.DataFrame:
             rows.append({
                 "name": name_el.get_text(strip=True) if name_el else None,
                 "price": price_el.get_text(strip=True) if price_el else None,
-                "page": page,
             })
 
-    df = pd.DataFrame(rows).dropna(how="all").drop_duplicates()
+    df = pd.DataFrame(rows).dropna(how="all")
     return df
+
 
 
 
@@ -274,7 +272,7 @@ def scrape_testimonials(max_pages: int = 50) -> pd.DataFrame:
         for c in cards:
             text = c.get_text(" ", strip=True)
             if text:
-                rows.append({"text": text, "page": page})
+                rows.append({"text": text})
 
     df = pd.DataFrame(rows).drop_duplicates()
     return df
