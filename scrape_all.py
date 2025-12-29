@@ -230,7 +230,6 @@ def scrape_products(max_pages: int = 50) -> pd.DataFrame:
         .drop(columns=["page"], errors="ignore")
     )
 
-
 # =====================================================
 
 # 4) TESTIMONIALS (HTML)
