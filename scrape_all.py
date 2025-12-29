@@ -185,13 +185,11 @@ def scrape_reviews(first: int = 50, max_pages: int = 50) -> pd.DataFrame:
 
 # =====================================================
 
-def get_soup(url: str) -> BeautifulSoup:
-
-    r = requests.get(url, headers=HEADERS, timeout=30)
-
+def get_soup(url: str, params: Optional[Dict[str, Any]] = None) -> BeautifulSoup:
+    r = requests.get(url, headers=HEADERS, params=params, timeout=30)
     r.raise_for_status()
-
     return BeautifulSoup(r.text, "html.parser")
+
 
 
 
@@ -201,53 +199,34 @@ def get_soup(url: str) -> BeautifulSoup:
 
 # =====================================================
 
-def scrape_products(max_pages: int = 20) -> pd.DataFrame:
-
+def scrape_products(max_pages: int = 50) -> pd.DataFrame:
     rows: List[Dict[str, Any]] = []
-
-    url = urljoin(BASE_URL, "/products")
-
+    base_url = urljoin(BASE_URL, "/products")
 
     for page in range(1, max_pages + 1):
+        soup = get_soup(base_url, params={"page": page})
 
-        soup = get_soup(url)
-
-
+        # kartice produktov (poberemo tudi nekaj fallbackov)
         cards = soup.select(".product, .product-card")
-
         print(f"Products page {page}: {len(cards)}")
 
-
-        for c in cards:
-
-            name_el = c.select_one("h1, h2, h3, .title, .product-title")
-
-            price_el = c.select_one(".price, .product-price")
-
-
-            rows.append({
-
-                "name": name_el.get_text(strip=True) if name_el else None,
-
-                "price": price_el.get_text(strip=True) if price_el else None,
-
-            })
-
-
-        next_a = soup.select_one("a[rel='next'], .pagination a.next")
-
-        if next_a and next_a.get("href"):
-
-            url = urljoin(BASE_URL, next_a["href"])
-
-        else:
-
+        # če ni več kartic, smo na koncu
+        if not cards:
             break
 
+        for c in cards:
+            name_el = c.select_one("h1, h2, h3, .title, .product-title")
+            price_el = c.select_one(".price, .product-price")
+
+            rows.append({
+                "name": name_el.get_text(strip=True) if name_el else None,
+                "price": price_el.get_text(strip=True) if price_el else None,
+                "page": page,
+            })
 
     df = pd.DataFrame(rows).dropna(how="all").drop_duplicates()
-
     return df
+
 
 
 
@@ -257,46 +236,49 @@ def scrape_products(max_pages: int = 20) -> pd.DataFrame:
 
 # =====================================================
 
-def scrape_testimonials(max_pages: int = 20) -> pd.DataFrame:
-
+def scrape_testimonials(max_pages: int = 50) -> pd.DataFrame:
     rows: List[Dict[str, Any]] = []
-
-    url = urljoin(BASE_URL, "/testimonials")
-
+    api_url = urljoin(BASE_URL, "/api/testimonials")
 
     for page in range(1, max_pages + 1):
+        resp = requests.get(
+            api_url,
+            params={"page": page},
+            headers={
+                **HEADERS,
+                "Referer": urljoin(BASE_URL, "/testimonials"),
+                "X-Secret-Token": "secret123",
+            },
+            timeout=30,
+        )
 
-        soup = get_soup(url)
+        # konec strani: API tipično vrne napako "invalid page" (JSON)
+        if resp.status_code != 200:
+            try:
+                data = resp.json()
+                if isinstance(data, dict) and data.get("detail", {}).get("error") == "invalid page":
+                    break
+            except Exception:
+                pass
+            resp.raise_for_status()
 
+        soup = BeautifulSoup(resp.text, "html.parser")
 
+        # API vrne HTML z elementi .testimonial
         cards = soup.select(".testimonial, .testimonial-card, blockquote")
-
         print(f"Testimonials page {page}: {len(cards)}")
 
-
-        for c in cards:
-
-            text = c.get_text(" ", strip=True)
-
-            if text:
-
-                rows.append({"text": text})
-
-
-        next_a = soup.select_one("a[rel='next'], .pagination a.next")
-
-        if next_a and next_a.get("href"):
-
-            url = urljoin(BASE_URL, next_a["href"])
-
-        else:
-
+        if not cards:
             break
 
+        for c in cards:
+            text = c.get_text(" ", strip=True)
+            if text:
+                rows.append({"text": text, "page": page})
 
     df = pd.DataFrame(rows).drop_duplicates()
-
     return df
+
 
 
 

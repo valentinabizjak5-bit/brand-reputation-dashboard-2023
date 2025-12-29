@@ -1,6 +1,26 @@
-name,price
-Box of Chocolate Candy,24.99
-Dark Red Energy Potion,4.99
-Teal Energy Potion,4.99
-Red Energy Potion,4.99
-Blue Energy Potion,4.99
+name,price,page
+Box of Chocolate Candy,24.99,1
+Dark Red Energy Potion,4.99,1
+Teal Energy Potion,4.99,1
+Red Energy Potion,4.99,1
+Blue Energy Potion,4.99,1
+Dragon Energy Potion,4.99,2
+Hiking Boots for Outdoor Adventures,89.99,2
+Women's High Heel Sandals,59.99,2
+Running Shoes for Men,49.99,2
+Kids' Light-Up Sneakers,29.99,2
+Classic Leather Sneakers,79.99,3
+Cat-Ear Beanie,14.99,3
+Box of Chocolate Candy,24.99,3
+Dark Red Energy Potion,4.99,3
+Teal Energy Potion,4.99,3
+Red Energy Potion,4.99,4
+Blue Energy Potion,4.99,4
+Dragon Energy Potion,4.99,4
+Hiking Boots for Outdoor Adventures,89.99,4
+Women's High Heel Sandals,59.99,4
+Running Shoes for Men,49.99,5
+Kids' Light-Up Sneakers,29.99,5
+Classic Leather Sneakers,79.99,5
+Cat-Ear Beanie,14.99,5
+Box of Chocolate Candy,24.99,5
