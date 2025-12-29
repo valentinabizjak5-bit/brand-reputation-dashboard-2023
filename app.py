@@ -91,6 +91,14 @@ else:
         st.stop()
 
     # Sentiment summary
+    # Najprej tabela: Reviews with Sentiment
+    st.divider()
+    st.markdown("### Reviews with Sentiment")
+    cols = [c for c in ["date", "rating", "text", "sentiment", "confidence"] if c in filtered.columns]
+    st.dataframe(filtered[cols].reset_index(drop=True), use_container_width=True)
+
+    # Potem povzetek: Sentiment summary
+    st.divider()
     counts = filtered["sentiment"].value_counts().reindex(["Positive", "Negative"]).fillna(0).astype(int)
     avg_conf = filtered.groupby("sentiment")["confidence"].mean().reindex(["Positive", "Negative"])
 
@@ -107,10 +115,10 @@ else:
     chart_df = counts.rename_axis("sentiment").reset_index(name="count")
     st.bar_chart(chart_df.set_index("sentiment"), y="count")
 
-    # Word Cloud (Bonus)
+    # Na koncu: Word Cloud
     st.divider()
     st.subheader(f"Most Common Words in {selected_label}")
-    
+
     all_text = " ".join(filtered["text"].tolist())
     if all_text.strip():
         wordcloud = WordCloud(width=800, height=400, background_color="white", colormap="viridis").generate(all_text)
@@ -120,8 +128,3 @@ else:
         st.pyplot(fig)
     else:
         st.write("Not enough text for Word Cloud.")
-
-    st.divider()
-    st.markdown("### Reviews with Sentiment")
-    cols = [c for c in ["date", "rating", "text", "sentiment", "confidence"] if c in filtered.columns]
-    st.dataframe(filtered[cols].reset_index(drop=True), use_container_width=True)
