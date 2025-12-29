@@ -198,7 +198,6 @@ def get_soup(url: str, params: Optional[Dict[str, Any]] = None) -> BeautifulSoup
 # 3) PRODUCTS (HTML)
 
 # =====================================================
-
 from typing import List, Dict, Any
 import pandas as pd
 from urllib.parse import urljoin
@@ -225,8 +224,11 @@ def scrape_products(max_pages: int = 50) -> pd.DataFrame:
                 "price": price_el.get_text(strip=True) if price_el else None,
             })
 
-    return pd.DataFrame(rows).dropna(how="all")
-
+    return (
+        pd.DataFrame(rows)
+        .dropna(how="all")
+        .drop(columns=["page"], errors="ignore")
+    )
 
 
 # =====================================================
@@ -275,8 +277,13 @@ def scrape_testimonials(max_pages: int = 50) -> pd.DataFrame:
             if text:
                 rows.append({"text": text})
 
-    df = pd.DataFrame(rows).drop_duplicates()
-    return df
+    
+    return (
+    pd.DataFrame(rows)
+    .dropna(how="all")
+    .drop(columns=["page"], errors="ignore")
+)
+
 
 
 
