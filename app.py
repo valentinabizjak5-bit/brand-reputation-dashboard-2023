@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+from wordcloud import WordCloud
 
+# Nastavitve strani
 st.set_page_config(page_title="Brand Reputation Dashboard - 2023", layout="wide")
 st.title("Brand Reputation Dashboard - 2023")
 
@@ -49,34 +52,30 @@ if section == "Products":
     if products_df.empty:
         st.info("Ni podatkov za Products. (Preveri products.csv)")
     else:
-        st.dataframe(products_df.reset_index(drop=True), width="stretch")
+        st.dataframe(products_df.reset_index(drop=True), use_container_width=True)
 
 elif section == "Testimonials":
     st.subheader("Testimonials")
     if testimonials_df.empty:
         st.info("Ni podatkov za Testimonials. (Preveri testimonials.csv)")
     else:
-        st.dataframe(testimonials_df.reset_index(drop=True), width="stretch")
+        st.dataframe(testimonials_df.reset_index(drop=True), use_container_width=True)
 
 else:
     st.subheader("Reviews (2023)")
 
-    # ✅ DEBUG PANEL (to ti bo takoj povedalo kaj je narobe)
+    # DEBUG PANEL
     with st.expander("DEBUG: columns in reviews_scored.csv"):
         st.write("Columns:", list(reviews_df.columns))
-        st.dataframe(reviews_df.head(5), width="stretch")
+        st.dataframe(reviews_df.head(5), use_container_width=True)
 
-    # ✅ mapiranje, če imaš slučajno POSITIVE/NEGATIVE
+    # Mapiranje sentimentov
     if "sentiment" not in reviews_df.columns and "sentiment_raw" in reviews_df.columns:
         reviews_df["sentiment"] = reviews_df["sentiment_raw"].map({"POSITIVE": "Positive", "NEGATIVE": "Negative"})
 
-    # ✅ zadnja varovalka
+    # Varnostni pregledi
     if "sentiment" not in reviews_df.columns:
-        st.error(
-            "V reviews_scored.csv NI stolpca 'sentiment'. "
-            "Odpri DEBUG zgoraj in preveri, kako se stolpci imenujejo. "
-            "Naj bo vsaj: date, text, sentiment, confidence."
-        )
+        st.error("V reviews_scored.csv NI stolpca 'sentiment'.")
         st.stop()
 
     if "confidence" not in reviews_df.columns:
@@ -118,6 +117,32 @@ else:
     chart_df = counts.rename_axis("sentiment").reset_index(name="count")
     st.bar_chart(chart_df.set_index("sentiment"), y="count")
 
+    # --- ✅ DODATEK: WORD CLOUD (BONUS) ---
+    st.divider()
+    st.subheader(f"Najpogostejše besede v mesecu {selected_label}")
+    
+    # Združimo vsa besedila mnenj v en niz
+    all_text = " ".join(filtered["text"].tolist())
+    
+    if all_text.strip():
+        # Ustvarimo oblak besed
+        wordcloud = WordCloud(
+            width=800, 
+            height=400, 
+            background_color="white",
+            colormap="viridis",
+            max_words=50
+        ).generate(all_text)
+        
+        # Prikaz oblaka s pomočjo matplotlib
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.imshow(wordcloud, interpolation="bilinear")
+        ax.axis("off")
+        st.pyplot(fig)
+    else:
+        st.write("Ni dovolj besedila za generiranje oblaka besed.")
+
+    st.divider()
     st.markdown("### Reviews (z sentimentom)")
     cols = [c for c in ["date", "rating", "text", "sentiment", "confidence"] if c in filtered.columns]
-    st.dataframe(filtered[cols].reset_index(drop=True), width="stretch")
+    st.dataframe(filtered[cols].reset_index(drop=True), use_container_width=True)
