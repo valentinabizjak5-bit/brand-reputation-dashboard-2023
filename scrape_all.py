@@ -199,6 +199,10 @@ def get_soup(url: str, params: Optional[Dict[str, Any]] = None) -> BeautifulSoup
 
 # =====================================================
 
+from typing import List, Dict, Any
+import pandas as pd
+from urllib.parse import urljoin
+
 def scrape_products(max_pages: int = 50) -> pd.DataFrame:
     rows: List[Dict[str, Any]] = []
     base_url = urljoin(BASE_URL, "/products")
@@ -221,10 +225,7 @@ def scrape_products(max_pages: int = 50) -> pd.DataFrame:
                 "price": price_el.get_text(strip=True) if price_el else None,
             })
 
-    df = pd.DataFrame(rows).dropna(how="all")
-    return df
-
-
+    return pd.DataFrame(rows).dropna(how="all")
 
 
 
